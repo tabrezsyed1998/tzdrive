@@ -1,6 +1,6 @@
 import express from "express"
 import { createWriteStream } from "fs"
-import {readdir, rm, rename} from "fs/promises"
+import {readdir, rm, rename, stat} from "fs/promises"
 import cors from "cors"
 
 const PORT = 3000
@@ -32,9 +32,17 @@ app.use(cors())
 
 // })
 
-app.get('/directory/', async (req, res) => {
-    const filesList = await readdir("./storage")
-    res.json(filesList)
+app.get("/directory{/:dirname}", async (req, res) => {
+    const {dirname} = req.params
+    console.log(dirname)
+    const fullDirPath = `./storage/${dirname ? dirname : "" }`
+    const filesList = await readdir(fullDirPath)
+    const resList = []
+    for(let item of filesList){
+        const stats = await stat(`${fullDirPath}/${item}`)
+        resList.push({name : item, isDirectory : stats.isDirectory()})
+    }
+    res.json(resList)
 })
 
 app.get("/files/:filename", (req, res) => {
