@@ -1,26 +1,24 @@
 import express from "express";
 import { readdir, stat, mkdir } from "fs/promises";
 import path from "path";
+import directoriesData from "../directoriesDB.json" with {type: "json"};
+import filesData from "../filesDB.json" with {type : "json"}
 
 const router = express.Router();
 // Get directory
-router.get("/{*dirname}", async (req, res) => {
-  const dirname = Array.isArray(req.params.dirname)
-    ? req.params.dirname.join("/")
-    : req.params.dirname || "";
-  const dirPath = path.join("/", dirname);
-  const fullDirPath = `./storage/${dirPath ? dirPath : ""}`;
-  try {
-    const filesList = await readdir(fullDirPath);
-    const resList = [];
-    for (let item of filesList) {
-      const stats = await stat(`${fullDirPath}/${item}`);
-      resList.push({ name: item, isDirectory: stats.isDirectory() });
+router.get("{/:id}", async (req, res) => {
+    const {id} = req.params
+    if(!id){
+        const directoryData = directoriesData[0]
+        const files = directoryData.files.map((fileId) => 
+            filesData.find((file) => file.id === fileId)
+        )
+        res.json({...directoryData, files})
+
+    }else{
+        const directoryData = directoriesData.find((folder) => folder.id === id)
+        res.json(directoryData)
     }
-    res.json(resList);
-  } catch (error) {
-    res.json({ message: error.message });
-  }
 });
 
 // Create directory
