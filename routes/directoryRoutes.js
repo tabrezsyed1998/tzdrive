@@ -1,37 +1,92 @@
 import express from "express";
-import { readdir, stat, mkdir } from "fs/promises";
-import path from "path";
+import { writeFile, rm } from "fs/promises";
 import directoriesData from "../directoriesDB.json" with {type: "json"};
 import filesData from "../filesDB.json" with {type : "json"}
 
 const router = express.Router();
 // Get directory
 router.get("{/:id}", async (req, res) => {
-    const {id} = req.params
-    if(!id){
-        const directoryData = directoriesData[0]
-        const files = directoryData.files.map((fileId) => 
+    const id = req.params.id || directoriesData[0].id
+    console.log(directoriesData)
+    const directoryData = directoriesData?.find((directory) => directory.id === id)
+    if(!directoryData){
+      return res.status(404).json({message: "Directory not found"})
+    }
+    const files = directoryData.files.map((fileId) => 
             filesData.find((file) => file.id === fileId)
         )
-        res.json({...directoryData, files})
-
-    }else{
-        const directoryData = directoriesData.find((folder) => folder.id === id)
-        res.json(directoryData)
-    }
+        const directories = directoryData.directories.map((dirId) => 
+         directoriesData.find((dir) => dir.id === dirId)
+        ).map(({id, name}) => ({id, name}) )
+        return res.json({...directoryData, files, directories})
 });
 
 // Create directory
-router.post("/{*dirname}", async (req, res) => {
+router.post("/{:parentDirId}", async (req, res, next) => {
   try {
-    const dirname = Array.isArray(req.params.dirname)
-      ? req.params.dirname.join("/")
-      : req.params.dirname || "";
-    const dirPath = path.join("/", dirname);
-    await mkdir(`./storage/${dirPath}`);
-    res.json({ message: "Directory Created" });
+    const parentDirId = req.params.parentDirId || directoriesData[0].id
+    const dirname = req.headers.dirname || "New Folder"
+    const id = crypto.randomUUID()
+    const parentDir = directoriesData.find((dir) => dir.id === parentDirId)
+    if(!parentDir){
+      return res.status(404).json({message : "Parent directory does not exist"})
+    }
+    parentDir.directories.push(id)
+    directoriesData.push({
+      id,
+      name : dirname,
+      parentDirId,
+      files: [],
+      directories: []
+    })
+    await writeFile("./directoriesDB.json", JSON.stringify(directoriesData))
+    return res.status(201).json({ message: "Directory Created" });
   } catch (error) {
-    res.json({ err: error.message });
+    next(error)
+  }
+});
+
+
+router.patch("/:id", async (req,res, next) => {
+  const {id} = req.params
+  const {newDirName} = req.body
+  const directoryData = directoriesData.find((directory) => directory.id === id);
+  if(!directoryData){
+    return res.status().json({message : "Directory not found"})
+  }
+  directoryData.name = newDirName 
+  try{
+    await writeFile("./directoriesDB.json" , JSON.stringify(directoriesData))
+  return res.status(200).json({message: "Directory Renamed"})
+  }catch(error){
+     next(error)
+  }
+  
+})
+
+router.delete("/:id", async (req, res, next) => {
+  const {id} = req.params
+  try {
+    const dirIndex = directoriesData.findIndex((directory) => directory.id === id)
+    const directoryData = directoriesData[dirIndex]
+    directoriesData.splice(dirIndex, 1)
+    for await (const fileId of directoryData.files) {
+      const fileIndex = filesData.findIndex((file) => file.id === fileId)
+      const fileData = filesData[fileIndex]
+      await rm(`./storage/${fileId}${fileData.extention}`);
+      filesData.splice(fileIndex, 1)
+    }
+    for await (const dirId of directoryData.directories) {
+      const dirIndex = directoriesData.findIndex(({id}) => id === dirId)
+      directoriesData.splice(dirIndex, 1)
+    }
+    const parentDirData = directoriesData.find((dirData) => dirData.id === directoryData.parentDirId)
+    parentDirData.directories = parentDirData.directories.filter((dirId) => dirId !== id)
+    await writeFile('./filesDB.json', JSON.stringify(filesData))
+    await writeFile('./directoriesDB.json', JSON.stringify(directoriesData))
+    res.status(200).json({ message: "Directory Deleted!" });
+  } catch (err) {
+    next(err)
   }
 });
 

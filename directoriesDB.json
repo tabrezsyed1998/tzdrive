@@ -4,10 +4,28 @@
         "name": "root",
         "parentDirId": null,
         "files": [
-            "8411a0fb-b9bb-448c-a9aa-677bca707a3c",
-            "3c199f97-49f6-4143-a234-da61b0a18dd1",
-            "831cf8a4-7dcb-410c-a1cf-1c1de57d60cc"
+            "793f7563-ed0b-48da-8642-ea38630a73d1"
         ],
+        "directories": [
+            "b74157b0-f857-43db-aa0c-f8379a1478e7"
+        ]
+    },
+    {
+        "id": "b74157b0-f857-43db-aa0c-f8379a1478e7",
+        "name": "test",
+        "parentDirId": "a770051a-c3bc-4bc3-b472-380e7f547ad0",
+        "files": [
+            "615660c9-2dff-40ce-a2b7-f23eb73ecbb3"
+        ],
+        "directories": [
+            "d11dc142-55c8-47e7-bd2e-a671b21996e9"
+        ]
+    },
+    {
+        "id": "d11dc142-55c8-47e7-bd2e-a671b21996e9",
+        "name": "demo",
+        "parentDirId": "b74157b0-f857-43db-aa0c-f8379a1478e7",
+        "files": [],
         "directories": []
     }
 ]
